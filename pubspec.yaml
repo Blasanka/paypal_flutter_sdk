@@ -1,7 +1,7 @@
 name: paypal_sdk_flutter
 description: Wrapper around Android native paypal SDK and IOS native paypal SDK.
 version: 0.0.1
-author: Blasanka95@gmail.com
+#author: Blasanka95@gmail.com
 homepage: https://github.com/Blasanka/paypal_flutter_sdk
 
 environment:
