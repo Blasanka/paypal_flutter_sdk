@@ -20,21 +20,27 @@ class _MyAppState extends State<MyApp> {
     String result;
     try {
       PaypalSdkFlutter sdk = PaypalSdkFlutter(
-        environment: Environment.sandbox,
-        merchantName: "ecommerce",
-        clientId: "your paypal client id",
+        environment: Environment.noNetwork,
+        merchantName: "your merchant name",
+        clientId: "your client id",
       );
       var result = await sdk.payWithPayPal(amount: amount, description: description);
-      print(result);
+      print("Withing example $result");
+
+      if (!mounted) return;
+
+      setState(() {
+        _paymentStatus = result;
+      });
     } on PlatformException {
       result = 'Failed to get payPal result.';
+
+      if (!mounted) return;
+
+      setState(() {
+        _paymentStatus = result;
+      });
     }
-
-    if (!mounted) return;
-
-    setState(() {
-      _paymentStatus = result;
-    });
   }
 
   @override
@@ -49,7 +55,7 @@ class _MyAppState extends State<MyApp> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
-            doPayment(amount: 10.0, description: "Apple");
+            await doPayment(amount: 10.0, description: "Apple");
           },
           child: Icon(Icons.payment),
         ),

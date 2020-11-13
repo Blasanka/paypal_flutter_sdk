@@ -1,7 +1,6 @@
 package com.blasanka.paypal_sdk_flutter;
 
 import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -32,9 +31,11 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.PluginRegistry;
 
 /** PaypalSdkFlutterPlugin */
-public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPlugin, ActivityAware, MethodCallHandler {
+public class PaypalSdkFlutterPlugin implements FlutterPlugin, ActivityAware, MethodCallHandler,
+        PluginRegistry.ActivityResultListener {
   /// The MethodChannel that will the communication between Flutter and native Android
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -47,7 +48,8 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
   private static final int REQUEST_CODE_FUTURE_PAYMENT = 2;
   private static final int REQUEST_CODE_PROFILE_SHARING = 3;
   private Result flutterResult;
-  private static Context context;
+  private Context context;
+  private Activity activity;
 
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -64,15 +66,15 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
   // them functionally equivalent. Only one of onAttachedToEngine or registerWith will be called
   // depending on the user's project. onAttachedToEngine or registerWith must both be defined
   // in the same class.
-  public static void registerWith(Registrar registrar) {
+  public static void registerWith(PluginRegistry.Registrar registrar) {
     final MethodChannel channel = new MethodChannel(registrar.messenger(), "paypal_sdk_flutter");
     channel.setMethodCallHandler(new PaypalSdkFlutterPlugin());
   }
 
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    flutterResult = result;
     if (call.method.equals("payWithPayPal")) {
-      flutterResult = result;
 
       payWithPayPal(call);
 
@@ -85,17 +87,17 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
     channel.setMethodCallHandler(null);
     channel = null;
+    activity.stopService(new Intent(context, PayPalService.class));
   }
 
-  @Override
-  public void onDestroy() {
-    // Stop service when done
-    stopService(new Intent(this, PayPalService.class));
-    super.onDestroy();
-  }
+//  @Override
+//  public void onDestroy() {
+//    // Stop service when done
+//    super.onDestroy();
+//  }
 
   @Override
-  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+  public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
     if (requestCode == REQUEST_CODE_PAYMENT) {
       if (resultCode == Activity.RESULT_OK) {
         PaymentConfirmation confirm =
@@ -117,6 +119,7 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
             displayResultText(confirm.getProofOfPayment().getPaymentId());
             //"PaymentConfirmation info received from PayPal");
 
+            return true;
           } catch (JSONException e) {
             Log.e(TAG, "an extremely unlikely failure occurred: ", e);
             flutterResult.error("-1", "An extremely unlikely failure occurred",  null);
@@ -147,14 +150,17 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
 
           } catch (JSONException e) {
             Log.e("FuturePaymentExample", "an extremely unlikely failure occurred: ", e);
+            flutterResult.error("-2", "an extremely unlikely failure occurred.",  null);
           }
         }
       } else if (resultCode == Activity.RESULT_CANCELED) {
         Log.i("FuturePaymentExample", "The user canceled.");
+        flutterResult.error("-2", "The user canceled.",  null);
       } else if (resultCode == PayPalFuturePaymentActivity.RESULT_EXTRAS_INVALID) {
         Log.i(
                 "FuturePaymentExample",
                 "Probably the attempt to previously start the PayPalService had an invalid PayPalConfiguration. Please see the docs.");
+        flutterResult.error("-2", "an extremely unlikely failure occurred.",  null);
       }
     } else if (requestCode == REQUEST_CODE_PROFILE_SHARING) {
       if (resultCode == Activity.RESULT_OK) {
@@ -172,6 +178,7 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
 
           } catch (JSONException e) {
             Log.e("ProfileSharingExample", "an extremely unlikely failure occurred: ", e);
+            flutterResult.error("-2", "an extremely unlikely failure occurred.",  null);
           }
         }
       } else if (resultCode == Activity.RESULT_CANCELED) {
@@ -180,8 +187,10 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
         Log.i(
                 "ProfileSharingExample",
                 "Probably the attempt to previously start the PayPalService had an invalid PayPalConfiguration. Please see the docs.");
+        flutterResult.error("-2", "Probably the attempt to previously.",  null);
       }
     }
+    return false;
   }
 
   private void payWithPayPal(@NonNull MethodCall call) {
@@ -224,7 +233,7 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
             .merchantPrivacyPolicyUri(privacyUrl)
             .merchantUserAgreementUri(legalUrl);
 
-    Intent intent = new Intent(context, PayPalService.class);
+    Intent intent = new Intent(activity, PayPalService.class);
     intent.putExtra(PayPalService.EXTRA_PAYPAL_CONFIGURATION, config);
     context.startService(intent);
     /*
@@ -252,12 +261,12 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
 
     paymentActivity.putExtra(PaymentActivity.EXTRA_PAYMENT, thingToBuy);
 
-    ((Activity) context).startActivityForResult(paymentActivity, REQUEST_CODE_PAYMENT);
+    activity.startActivityForResult(paymentActivity, REQUEST_CODE_PAYMENT);
   }
 
   private PayPalPayment getThingToBuy(String paymentIntent, Object amount, Object currency, Object description) {
     if (currency == null) currency = "USD";
-    if (description == null) description = "";
+    if (description == null) description = "description";
     return new PayPalPayment(new BigDecimal(amount.toString()), currency.toString(), description.toString(),
             paymentIntent);
   }
@@ -290,7 +299,9 @@ public class PaypalSdkFlutterPlugin extends FlutterActivity implements FlutterPl
 
   @Override
   public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
-    context = binding.getActivity();
+    activity = binding.getActivity();
+    context = binding.getActivity().getBaseContext();
+    binding.addActivityResultListener(this);
   }
 
   @Override

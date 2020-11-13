@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -45,10 +46,12 @@ class PaypalSdkFlutter {
             "description": description,
           }
       );
+      print("within plugin $result");
       return result;
-    } catch (e) {
-      print(e);
-      return null;
+    } catch (e, t) {
+      log(e);
+      print(t);
+      return "ITs null";
     }
   }
 }
