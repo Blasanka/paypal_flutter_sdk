@@ -39,3 +39,5 @@ Implementation and available parameters for now:
       /// [currency] default to USD
       /// [description] default to empty string ""
       Future<String> payWithPayPal({@required double amount, @required String description, String currency}) async {//..
+      
+You can get the client id from your paypal developer account dashboard.
