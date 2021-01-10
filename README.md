@@ -11,7 +11,7 @@ nothing to worry).
       PaypalSdkFlutter sdk = PaypalSdkFlutter(
         environment: Environment.sandbox,
         merchantName: "ecommerce",
-        clientId: "AQlOU6BX5Nm7G95hWzp5du2OEJlb7p3-2HM9qQH49p_uw1-fw6P96B9dmBZZSz9bg4d6ko-hVfet6zvE",
+        clientId: "AQlOU6B3g4hj23g4hg32jhjh5du2OEJlb7p3-2HMffsdQH49p_uw1-fw6P96BsdfdfdsZSz9bg4d6ko-hVfet6zvE",
       );
       var result = await sdk.payWithPayPal(amount: amount, description: description);
       print(result);
